@@ -76,10 +76,7 @@ def process_reddit_data(submissions_file, comments_file):
     comments_df['created_utc'] = pd.to_datetime(comments_df['created_utc'], unit='s')
     
     # Filter submissions containing "Essure"
-    essure_submissions = submissions_df[
-        submissions_df['title'].str.contains('Essure', case=True, na=False) |
-        submissions_df['selftext'].str.contains('Essure', case=True, na=False)
-    ]
+ 
     essure_pattern = r'\bEssure\b|\bessure\b'
     essure_submissions = submissions_df[
         submissions_df['title'].str.contains(essure_pattern, regex=True, case=True, na=False) |
@@ -154,8 +151,8 @@ def process_reddit_data(submissions_file, comments_file):
     return full_df
 
 # Process all zst files in submissions and comments folders
-submissions_dir = "../../data/Input/Reddit/submissions"
-comments_dir = "../../data/Input/Reddit/comments"
+submissions_dir = "../../Data/Input/Reddit/Submissions"
+comments_dir = "../../Data/Input/Reddit/Comments"
 all_discussions = []
 
 # Get list of all zst files
@@ -188,4 +185,4 @@ if all_discussions:
     print(f"With {final_df['comment_base_id'].nunique()} comments")
     
     # Save results if needed
-    #final_df.to_csv('essure_discussions.csv', index=False)
+    final_df.to_csv('essure_discussions.csv', index=False)
