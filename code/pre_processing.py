@@ -65,8 +65,8 @@ def process_reddit_data(submissions_file, comments_file):
     comments_data = read_zst_to_json(comments_file)
     
     # Create DataFrames with essential columns
-    submissions_cols = ['id', 'name', 'created_utc', 'title', 'selftext', 'subreddit']
-    comments_cols = ['id', 'subreddit', 'created_utc', 'body', 'link_id', 'parent_id']
+    submissions_cols = ['id', 'name', 'created_utc', 'title', 'selftext', 'subreddit', 'author']
+    comments_cols = ['id', 'subreddit', 'created_utc', 'body', 'link_id', 'parent_id', 'author']
     
     submissions_df = pd.DataFrame(submissions_data)[submissions_cols]
     comments_df = pd.DataFrame(comments_data)[comments_cols]
@@ -92,7 +92,8 @@ def process_reddit_data(submissions_file, comments_file):
         comments_df,
         left_on='name',
         right_on='link_id',
-        how='left'
+        how='left',
+        suffixes=('_submission', '_comment')
     )
     
     # Merge comments with their submissions
@@ -101,43 +102,10 @@ def process_reddit_data(submissions_file, comments_file):
         submissions_df,
         left_on='link_id',
         right_on='name',
-        how='left'
+        how='left',
+        suffixes=('_comment', '_submission')
     )
     
-    # Rename columns for merged_df_1 (submissions left, comments right)
-    column_renames_1 = {
-        'id_x': 'submission_base_id',
-        'id_y': 'comment_base_id',
-        'name': 'submission_id',
-        'link_id': 'comment_link_id',
-        'body': 'comment_body',
-        'created_utc_x': 'submission_created_utc',
-        'created_utc_y': 'comment_created_utc',
-        'subreddit_x': 'submission_subreddit',
-        'parent_id': 'comment_parent_id',
-        'title': 'submission_title',
-        'selftext': 'submission_selftext',
-        'subreddit_y': 'comment_subreddit'
-    }
-    
-    # Rename columns for merged_df_2 (comments left, submissions right)
-    column_renames_2 = {
-        'id_x': 'comment_base_id',
-        'id_y': 'submission_base_id',
-        'name': 'submission_id',
-        'link_id': 'comment_link_id',
-        'body': 'comment_body',
-        'created_utc_x': 'comment_created_utc',
-        'created_utc_y': 'submission_created_utc',
-        'subreddit_x': 'comment_subreddit',
-        'parent_id': 'comment_parent_id',
-        'title': 'submission_title',
-        'selftext': 'submission_selftext',
-        'subreddit_y': 'submission_subreddit'
-    }
-    
-    merged_df_1.rename(columns=column_renames_1, inplace=True)
-    merged_df_2.rename(columns=column_renames_2, inplace=True)
     
     # Combine results and remove duplicates
     full_df = pd.concat([merged_df_1, merged_df_2], ignore_index=True)
@@ -145,19 +113,22 @@ def process_reddit_data(submissions_file, comments_file):
     
     print(f"\nResults:")
     print(f"Found {len(full_df)} unique Essure-related discussions")
-    print(f"From {full_df['submission_base_id'].nunique()} unique submissions")
-    print(f"With {full_df['comment_base_id'].nunique()} unique comments")
+    print(f"From {full_df['id_submission'].nunique()} unique submissions")
+    print(f"With {full_df['id_comment'].nunique()} unique comments")
     
     return full_df
 
 # Process all zst files in submissions and comments folders
 submissions_dir = "../../Data/Input/Reddit/Submissions"
 comments_dir = "../../Data/Input/Reddit/Comments"
-all_discussions = []
+
 
 # Get list of all zst files
 submission_files = [f for f in os.listdir(submissions_dir) if f.endswith('.zst')]
 comment_files = [f for f in os.listdir(comments_dir) if f.endswith('.zst')]
+
+output_dir = "../../Data/Output/Reddit"
+os.makedirs(output_dir, exist_ok=True)
 
 # Match submission and comment files by subreddit name
 for submission_file in submission_files:
@@ -169,20 +140,19 @@ for submission_file in submission_files:
     if comment_file in comment_files:
         submissions_path = os.path.join(submissions_dir, submission_file)
         comments_path = os.path.join(comments_dir, comment_file)
+        output_file = os.path.join(output_dir, f"{subreddit}_essure_discussions.csv")
         
+        print(f"\n{'='*50}")
         print(f"\nProcessing subreddit: {subreddit}")
-        discussions = process_reddit_data(submissions_path, comments_path)
-        all_discussions.append(discussions)
+        print(f"\n{'='*50}")
 
-# Combine all results
-if all_discussions:
-    final_df = pd.concat(all_discussions, ignore_index=True)
-    final_df = final_df.drop_duplicates()
-    
-    print("\nFinal Results:")
-    print(f"Total unique Essure-related discussions: {len(final_df)}")
-    print(f"Across {final_df['submission_base_id'].nunique()} submissions")
-    print(f"With {final_df['comment_base_id'].nunique()} comments")
-    
-    # Save results if needed
-    final_df.to_csv('essure_discussions.csv', index=False)
+        discussions = process_reddit_data(submissions_path, comments_path)
+        if len(discussions) > 0:
+            discussions.to_csv(output_file, index=False)
+            print(f"\nResults for r/{subreddit}:")
+            print(f"-Saved {len(discussions)} discussions")
+            print(f"- From{discussions['id_submission'].nunique()} submissions")
+            print(f"- Output saved to {output_file}")
+        
+        del discussions 
+
