@@ -76,7 +76,7 @@ def process_reddit_data(submissions_file, comments_file):
     comments_df['created_utc'] = pd.to_datetime(comments_df['created_utc'], unit='s')
     
     # Filter submissions containing "Essure"
- 
+
     essure_pattern = r'\bEssure\b|\bessure\b'
     essure_submissions = submissions_df[
         submissions_df['title'].str.contains(essure_pattern, regex=True, case=True, na=False) |
@@ -106,7 +106,6 @@ def process_reddit_data(submissions_file, comments_file):
         suffixes=('_comment', '_submission')
     )
     
-    
     # Combine results and remove duplicates
     full_df = pd.concat([merged_df_1, merged_df_2], ignore_index=True)
     full_df = full_df.drop_duplicates()
@@ -115,10 +114,13 @@ def process_reddit_data(submissions_file, comments_file):
     print(f"Found {len(full_df)} unique Essure-related discussions")
     print(f"From {full_df['id_submission'].nunique()} unique submissions")
     print(f"With {full_df['id_comment'].nunique()} unique comments")
+
+    print(f"Across {full_df['subreddit_submission'].nunique()} subreddits:")
     
     return full_df
 
 # Process all zst files in submissions and comments folders
+
 submissions_dir = "../../Data/Input/Reddit/Submissions"
 comments_dir = "../../Data/Input/Reddit/Comments"
 
@@ -131,8 +133,11 @@ output_dir = "../../Data/Output/Reddit"
 os.makedirs(output_dir, exist_ok=True)
 
 # Match submission and comment files by subreddit name
+output_dir = "../../data/Output/Reddit"
+os.makedirs(output_dir, exist_ok=True)
+
 for submission_file in submission_files:
-    # Extract subreddit name from filename (assuming format: subreddit_submissions.zst)
+    # Extract subreddit name from filename
     subreddit = submission_file.replace('_submissions.zst', '')
     comment_file = f"{subreddit}_comments.zst"
     
@@ -143,16 +148,23 @@ for submission_file in submission_files:
         output_file = os.path.join(output_dir, f"{subreddit}_essure_discussions.csv")
         
         print(f"\n{'='*50}")
-        print(f"\nProcessing subreddit: {subreddit}")
-        print(f"\n{'='*50}")
+
+        print(f"Processing subreddit: r/{subreddit}")
+        print(f"{'='*50}")
+        
+        # Process one subreddit and save immediately
 
         discussions = process_reddit_data(submissions_path, comments_path)
         if len(discussions) > 0:
             discussions.to_csv(output_file, index=False)
             print(f"\nResults for r/{subreddit}:")
-            print(f"-Saved {len(discussions)} discussions")
-            print(f"- From{discussions['id_submission'].nunique()} submissions")
-            print(f"- Output saved to {output_file}")
+
+            print(f"- Saved {len(discussions)} discussions")
+            print(f"- From {discussions['id_submission'].nunique()} submissions")
+            print(f"- With {discussions['id_comment'].nunique()} comments")
+            print(f"- Output saved to: {output_file}")
         
-        del discussions 
+        # Clear memory
+        del discussions
+        
 
