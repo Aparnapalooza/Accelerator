@@ -2,3 +2,4 @@
 .env
 #Ignore csv files
 *.csv
+*.txt
