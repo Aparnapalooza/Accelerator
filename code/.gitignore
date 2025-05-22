@@ -1,0 +1,4 @@
+#Ignore these files - key for open AI
+.env
+#Ignore csv files
+*.csv
