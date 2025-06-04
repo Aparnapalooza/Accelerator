@@ -3,3 +3,4 @@
 #Ignore csv files
 code/*.csv
 *.txt
+code/*.csv
